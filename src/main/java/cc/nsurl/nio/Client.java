@@ -147,7 +147,7 @@ public class Client {
             // TODO: Hand the data off to our worker thread
             // print new String(bytes.toByteArray());
 
-            System.out.println(bytes.toString());
+//            System.out.println(bytes.toString());
 
             key.interestOps(SelectionKey.OP_READ);
         }
@@ -254,7 +254,7 @@ public class Client {
 
     public static void main(String[] args) {
         String host = "0.0.0.0";
-        int port = 9090;
+        int port = 12345;
         int count = 100;
 
         for (int i = 0; i < args.length; i++) {
@@ -271,7 +271,7 @@ public class Client {
                     count = Integer.parseInt(args[++i]);
                     break;
                 default:  //
-                    System.err.println("error params.\n-h host default 0.0.0.0\n-p port default 9090\n-c count default 100");
+                    System.err.println("error params.\n-h host default 0.0.0.0\n-p port default 12345\n-c count default 100");
                     System.out.println("default: host:" + host + ", port:" + port + ", count:" + count);
                     break;
             }
