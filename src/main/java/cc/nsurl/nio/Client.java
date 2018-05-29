@@ -1,4 +1,4 @@
-package cc.nsurl.chat.nio;
+package cc.nsurl.nio;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
