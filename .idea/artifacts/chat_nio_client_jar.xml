@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="chat.nio.client:jar">
+    <output-path>$PROJECT_DIR$/target/artifacts/chat_nio_client_jar</output-path>
+    <root id="archive" name="chat.nio.client.jar">
+      <element id="module-output" name="chat.nio.client" />
+    </root>
+  </artifact>
+</component>
