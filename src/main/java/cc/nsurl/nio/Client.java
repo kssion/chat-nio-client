@@ -19,7 +19,7 @@ public class Client {
 
     private final ByteBuffer readBuffer = ByteBuffer.allocate(1024);
 
-    boolean running = true;
+    private boolean running = true;
 
     private Client(String host, int port, int count) {
         try {
@@ -36,24 +36,47 @@ public class Client {
 
         InetSocketAddress isa = new InetSocketAddress(host, port);
 
+
+        ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
+
         for (int i = 0; i < count; i++) {
             try {
                 SocketChannel sc = SocketChannel.open(isa);
                 sc.configureBlocking(false);
                 sc.register(selector, SelectionKey.OP_READ);
-                System.out.println(sc.getLocalAddress() + " -> " + (i + 1));
+
+                InetSocketAddress address = (InetSocketAddress)sc.getLocalAddress();
+                byteBuffer.put(String.format("%d ", address.getPort()).getBytes());
+                if (i % 100 == 99) {
+                    byte[] bytes = new byte[byteBuffer.position()];
+                    byteBuffer.flip();
+                    byteBuffer.get(bytes);
+
+                    System.out.println(new String(bytes));
+                    byteBuffer.clear();
+                }
 
             } catch (IOException e) {
                 e.printStackTrace();
+                if (i == 0) return;
                 break;
             }
         }
 
+        if (byteBuffer.remaining() > 0) {
+            byte[] bytes = new byte[byteBuffer.position()];
+            byteBuffer.flip();
+            byteBuffer.get(bytes);
+            System.out.println(new String(bytes));
+        }
+
         new ClientThread().start();
 
-        Set<SelectionKey> keys = selector.keys();
-        for (SelectionKey k : keys) {
-            ts.put(k.channel().hashCode(), new TimeInterval());
+        {
+            Set<SelectionKey> keys = selector.keys();
+            for (SelectionKey key : keys) {
+                ts.put(key.channel().hashCode(), new TimeInterval());
+            }
         }
 
         //创建键盘输入流
@@ -63,12 +86,12 @@ public class Client {
             //读取键盘输入
             String line = scan.nextLine();
 
-            if (line.equals("ls")) {
+            SocketChannel[] sockets = this.sockets();
 
-                int i = 0;
-                for (SelectionKey k : keys) {
-                    if (k.isValid()) {
-                        SocketChannel socket = (SocketChannel) k.channel();
+            switch (line) {
+                case "ls": {
+                    int i = 0;
+                    for (SocketChannel socket : sockets) {
                         TimeInterval ti = ts.get(socket.hashCode());
                         System.out.print(String.format(" %.1f ", (ti.endTime - ti.startTime) / 1000000.0));
 
@@ -76,33 +99,40 @@ public class Client {
                             System.out.println();
                         }
                     }
+                    if (i % 10 > 0) {
+                        System.out.println();
+                    }
+                    break;
                 }
-                continue;
-            }
-
-            if (line.equals("end")) {
-                Set<SelectionKey> all = selector.keys();
-                for (SelectionKey k : all) {
-                    if (k.isValid()) {
-                        SocketChannel sc = (SocketChannel) k.channel();
+                case "end": {
+                    for (SocketChannel socket : sockets) {
                         try {
-                            sc.shutdownInput();
+                            socket.shutdownInput();
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
                     }
+
+                    running = false;
+                    this.selector.wakeup();
+                    break;
                 }
-
-                running = false;
-                this.selector.wakeup();
+                default: {
+                    System.out.println("开始发送");
+                    for (SocketChannel socket : sockets) {
+                        send(socket, line.getBytes());
+                    }
+                    System.out.println("发送完成");
+                }
             }
-
-            System.out.println("开始发送");
-            for (SelectionKey k : keys) {
-                send((SocketChannel)k.channel(), line.getBytes());
-            }
-            System.out.println("发送完成");
         }
+    }
+
+    private SocketChannel[] sockets() {
+        return selector.keys().stream()
+                .filter(k -> k.isValid() && k.channel() instanceof SocketChannel)
+                .map(SelectionKey::channel)
+                .toArray(SocketChannel[]::new);
     }
 
     private void send(SocketChannel socket, byte[] bytes) {
@@ -257,6 +287,9 @@ public class Client {
         int port = 12345;
         int count = 100;
 
+        if (args.length == 0) {
+            System.err.println("Params:\n\t-h host default 0.0.0.0\n\t-p port default 12345\n\t-c count default 100");
+        }
         for (int i = 0; i < args.length; i++) {
             String str = args[i];
 
@@ -271,9 +304,7 @@ public class Client {
                     count = Integer.parseInt(args[++i]);
                     break;
                 default:  //
-                    System.err.println("error params.\n-h host default 0.0.0.0\n-p port default 12345\n-c count default 100");
-                    System.out.println("default: host:" + host + ", port:" + port + ", count:" + count);
-                    break;
+                    System.err.println("error params.\n-h host\n-p port\n-c count");
             }
         }
 
