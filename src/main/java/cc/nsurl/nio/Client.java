@@ -63,12 +63,14 @@ public class Client {
             }
         }
 
+        byteBuffer.flip();
         if (byteBuffer.remaining() > 0) {
             byte[] bytes = new byte[byteBuffer.position()];
-            byteBuffer.flip();
             byteBuffer.get(bytes);
             System.out.println(new String(bytes));
         }
+
+        System.out.println("连接完成 count: " + count);
 
         new ClientThread().start();
 
@@ -120,7 +122,7 @@ public class Client {
                 default: {
                     System.out.println("开始发送");
                     for (SocketChannel socket : sockets) {
-                        send(socket, line.getBytes());
+                        send(socket, (line + System.nanoTime()).getBytes());
                     }
                     System.out.println("发送完成");
                 }
